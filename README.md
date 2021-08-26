@@ -15,19 +15,21 @@ Install homebrew
 sudo /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
 ```
 
-For Unix/Linux OS you might go to the official Terraform site and download bin-file with software.
+For Unix/Linux OS you might go to the official Terraform site and download bin-file with software.  
+  
+Install docker  
+Download here https://www.docker.com/products/docker-desktop  
+Follow the instructions to install it and start docker desktop  
+  
+Install Postman  
+Download here https://www.postman.com/downloads/  
+Follow the instructions to install it  
 
-Install docker
-Download here https://www.docker.com/products/docker-desktop
-Follow the instructions to install it and start docker desktop
-
-Install Postman
-Download here https://www.postman.com/downloads/
-Follow the instructions to install it
-
-Install terraform
+Install terraform  
+```
 brew tap hashicorp/tap
 brew install hashicorp/tap/terraform
+```
 
 This was my version of terraform and my providers
 chase@Chases-MacBook-Pro simtooreal % terraform --version  
@@ -110,9 +112,9 @@ docker stack deploy --compose-file=docker-compose.yml simtooreal
 
 ## Buy a domain
 
-Buy a domain like simtooreal.com domain and make sure you can use it in your us-east-1 account
-Don't forget to update any instance of simtooreal.com with your domain in main.tf
-
+Buy a domain like simtooreal.com domain and make sure you can use it in your us-east-1 account  
+Don't forget to update any instance of simtooreal.com with your domain in main.tf  
+  
 ## Setup AWS credentials
 
 Setup an AWS key pair in IAM console in us-east-1 for setting up the infrastructure in terraform and use these as `<your aws id>` and `<your aws key>`
@@ -139,20 +141,18 @@ ssh-add ~/.ssh/id_rsa
 
 ## Run the following commands to setup all infrastructure
 
-Put your public ssh key (~/.ssh/id_rsa.pub) in the
-resource "aws_key_pair" "simtooreal" section of the main.tf terraform file
-as the string value of public_key in quotation marks so you can login to the bastion later
-
-You also need to update the IP address allowed to attempt public subnet SSH access in main.tf
-you will find this in the following section:
-"aws_security_group" "simtooreal_public"
-
-To initialize terraform and get the external modules used use these commands
-
-Setup a terraform cloud account at https://app.terraform.io/
-
+Put your public ssh key (~/.ssh/id_rsa.pub) in the resource "aws_key_pair" "simtooreal" section of the main.tf terraform file as the string value of public_key in quotation marks so you can login to the bastion later  
+  
+You also need to update the IP address allowed to attempt public subnet SSH access in main.tf  
+you will find this in the following section:  
+"aws_security_group" "simtooreal_public"  
+  
+To initialize terraform and get the external modules used use these commands  
+  
+Setup a terraform cloud account at https://app.terraform.io/  
+  
 Make an organization and a workspace in terraform cloud making sure to integrate your workspace with your github repo
-
+  
 Export your sensitive information as environment variables in terraform cloud located here https://app.terraform.io/app/simtooreal/workspaces/simtooreal/variables under `Environment Variables`
 
 Your environment variables are all sensitive so be sure when you add a variable key value pair you check "sensitive" checkbox
@@ -165,12 +165,12 @@ TF_VAR_aws_access_key_id = <your aws id>
 TF_VAR_aws_secret_access_key = <your aws key>
 ```
 
-Now when you push to github terraform cloud will automatically attempt an apply, show you the resulting changes, and ask for your manual confirmation of a run here before terraform infrastructure is applied https://app.terraform.io/app/simtooreal/workspaces/simtooreal/runs
-
-Then state is updated and managed in the cloud automatically for you here https://app.terraform.io/app/simtooreal/workspaces/simtooreal/states
-
-Multiple people can use this, you don't always need to terraform apply, and you don't need to manage sensitive passwords or state on your local machine
-
+Now when you push to github terraform cloud will automatically attempt an apply, show you the resulting changes, and ask for your manual confirmation of a run here before terraform infrastructure is applied https://app.terraform.io/app/simtooreal/workspaces/simtooreal/runs  
+  
+Then state is updated and managed in the cloud automatically for you here https://app.terraform.io/app/simtooreal/workspaces/simtooreal/states  
+  
+Multiple people can use this, you don't always need to terraform apply, and you don't need to manage sensitive passwords or state on your local machine  
+  
 Wait for terraform apply to finish and you should have a green output in your run if all goes well
 
 ## Enable ssh key agent forwarding and login to the bastion and the private instance to setup the database
@@ -205,10 +205,10 @@ Now you will login to your private machine without storing any credentials on th
 ```
 ssh -A -i "~/.ssh/id_rsa" ubuntu@public.simtooreal.com
 ```
-If you get the error Host key verification failed. you need to open your ~/.ssh/known_hosts file and empty it
-This error means that someone may have replaced the public instance with another one and is trying to trick you
-Usually the simpler explanation is that you yourself or the local infrastructure admin have replaced the bastion
-But be security minded and be careful
+If you get the error Host key verification failed. you need to open your ~/.ssh/known_hosts file and empty it  
+This error means that someone may have replaced the public instance with another one and is trying to trick you  
+Usually the simpler explanation is that you yourself or the local infrastructure admin have replaced the bastion  
+But be security minded and be careful  
 ```
 ssh -o StrictHostKeyChecking=no -i "~/.ssh/id_rsa" ubuntu@private.simtooreal.com
 ```
@@ -241,15 +241,15 @@ Press ctrl+D twice when you setup the database to get back to your machine
 
 ## Setup github secrets
 
-Start a new repo in github called simtooreal
+Start a new repo in github called simtooreal  
 You want to initialize the simtooreal folder as a git repo
 ```
 git init
 git branch -m main
 ```
-Make sure to setup ssh keys in github and locally using these instructions
-https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh
-Or use https
+Make sure to setup ssh keys in github and locally using these instructions  
+https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh  
+Or use https  
 Push to github and setup your repo in github to allow actions
 ```
 git add .
@@ -261,7 +261,7 @@ Make sure you add AWS_ACCESS_KEY_ID with a value of `<your aws id>` and AWS_SECR
 
 ## Set github workflows environment variables
 
-I have my environment variables set in github workflow but you will need to put your own values in, my settings are found here https://github.com/chasebrignac/simtooreal/blob/main/.github/workflows/aws.yml
+I have my environment variables set in github workflow but you will need to put your own values in, my settings are found here   https://github.com/chasebrignac/simtooreal/blob/main/.github/workflows/aws.yml
 
 ## Run a Github action so that you can push an image to ECR and deploy automatically
 
@@ -269,15 +269,15 @@ When you are ready to zip up some of the scripts to put on the private instance 
 ```
 rm simtooreal.tar.gz && rsync -a *.sql simtooreal && rsync -a *.py simtooreal && rsync -a *.yml simtooreal && rsync -a *.txt simtooreal && rsync -a topics.csv simtooreal && rsync -a Dockerfile simtooreal && rsync -a clf.joblib simtooreal && rsync -a templates simtooreal && rsync -a *.json simtooreal && tar -zcvf simtooreal.tar.gz simtooreal && rm -rf simtooreal
 ```
-This also updates the version of simtooreal found on the private instance after you destroy an instance and re-run the terraform apply in terraform cloud
-
+This also updates the version of simtooreal found on the private instance after you destroy an instance and re-run the terraform apply in terraform cloud  
+  
 When you are ready to update your bastion make a new version with tar
 ```
 tar -zcvf bastion.tar.gz bastion
 ```
-Now you can update the bastion in the instance by running the terraform apply in terraform cloud again
-
-Login to github and setup a repo under your username called simtooreal without a README.md
+Now you can update the bastion in the instance by running the terraform apply in terraform cloud again  
+  
+Login to github and setup a repo under your username called simtooreal without a README.md  
 Now on your local machine's terminal in the simtooreal folder initialize git and push your code to github
 ```
 git init
@@ -290,12 +290,12 @@ git push -u origin main
 
 ## Automated training and pushing of pickle file to github and then to ECS happens on the private instance
 
-The data engine turns every day by training on the AWS private instance as long as your github credentials are setup
-Make sure to setup ssh keys in github and on the private instance in AWS using these instructions
-https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh
-Or use https
-After cloning the repo onto your private instance you can run the training automatically by starting a tmux session
-Then you can set environment variables and run the command to train your model and update your pickle file
+The data engine can turn every day by training on the AWS private instance as long as your github credentials are setup  
+Make sure to setup ssh keys in github and on the private instance in AWS using these instructions. 
+https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh  
+Or use https  
+After cloning the repo onto your private instance you can run the training automatically by starting a tmux session  
+Then you can set environment variables and run the command to train your model and update your pickle file  
 ```
 export PGPASSWORD=<insert database password> && export POSTGRESQL_HOST=database.simtooreal.com && export POSTGRESQL_USER_NAME=postgres && export POSTGRESQL_PASSWORD=<insert database password>
 ```

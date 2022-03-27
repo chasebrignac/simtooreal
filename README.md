@@ -77,7 +77,7 @@ Don't forget to update any occurance of simtooreal.com with your domain in main.
 
 ## Setup AWS credentials
 
-Setup an AWS key pair in IAM console in us-east-1 here https://us-east-1.console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs: for setting up the infrastructure in terraform and use these as `<your aws id>` and `<your aws key>`
+Setup an AWS key pair in IAM console in us-east-1 for your user, for example if your user is named chase go here https://us-east-1.console.aws.amazon.com/iam/home#/users/chase?section=security_credentials for setting up the infrastructure in terraform and use these as `<your aws id>` and `<your aws key>`
 
 ## Gain access to RaiSim
 

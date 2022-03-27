@@ -1,9 +1,8 @@
-## First unzip your zipped up file from me
+## First clone the Github repo
 
 Unzip the file like so
 ```
-tar -xf chasebrignac.tar.gz
-mv chasebrignac simtooreal
+git clone git@github.com:simtooreal/simtooreal.git
 cd simtooreal
 ```
 
@@ -21,10 +20,6 @@ Install docker
 Download here https://www.docker.com/products/docker-desktop
 Follow the instructions to install it and start docker desktop
 
-Install Postman
-Download here https://www.postman.com/downloads/
-Follow the instructions to install it
-
 Install terraform
 brew tap hashicorp/tap
 brew install hashicorp/tap/terraform
@@ -40,40 +35,14 @@ Install aws cli
 brew install awscli
 ```
 
-Install ansible
-```
-brew install ansible
-```
-
-Install postgres
-```
-brew install postgres
-```
-
-Install python annd packages for testing the API
-```
-brew install python3
-pip3 install requests
-pip3 install coolname
-```
-
-Only use this command when you want to setup your local environment variables in a new shell window
-```
-export PGPASSWORD=magical_password && export POSTGRESQL_HOST_FROM_DOCKER=simtooreal_database_1 && export POSTGRESQL_USER_NAME=unicorn_user && export POSTGRESQL_PASSWORD=magical_password && POSTGRESQL_HOST=localhost
-```
-
 To start the app locally
 ```
 untar chasebrignac.tar.gz
 cd simtooreal
-echo 'OPENAI_API_KEY=<your OpenAI API key>' > .env
+echo 'RAISIM_API_KEY=<your RaiSim API key>' > .env
 docker-compose down --volumes && docker-compose build --no-cache && docker-compose up
 ```
 
-To enter the local database in another terminal on your machine
-```
-psql --host=localhost --username=unicorn_user --dbname=simtooreal -w
-```
 When you want to quit the app locally use ctrl+c in the window you started the app in
 If you would like to restart the app with some code changes locally use this command
 ```
@@ -100,26 +69,19 @@ To make this message go away run this command
 ```
 docker system prune -a
 ```
-If you want to replace all data from the database but you are running a docker stack you will first need to run these commands
-```
-docker stack rm simtooreal
-docker system prune -a
-docker volume rm simtooreal_database-data
-docker stack deploy --compose-file=docker-compose.yml simtooreal
-```
 
 ## Buy a domain
 
 Buy a domain like simtooreal.com domain and make sure you can use it in your us-east-1 account
-Don't forget to update any instance of simtooreal.com with your domain in main.tf
+Don't forget to update any occurance of simtooreal.com with your domain in main.tf
 
 ## Setup AWS credentials
 
-Setup an AWS key pair in IAM console in us-east-1 for setting up the infrastructure in terraform and use these as `<your aws id>` and `<your aws key>`
+Setup an AWS key pair in IAM console in us-east-1 here https://us-east-1.console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs: for setting up the infrastructure in terraform and use these as `<your aws id>` and `<your aws key>`
 
-## Gain access to GPT-3
+## Gain access to RaiSim
 
-Setup a GPT-3 Beta access account and use the key found here https://beta.openai.com/docs/developer-quickstart/your-api-keys as `<your OpenAI API key>`
+Setup a RaiSim API key as `<your RaiSim API key>`
 
 ## Make a private and public ssh key pair
 ```
@@ -157,7 +119,7 @@ Export your sensitive information as environment variables in terraform cloud lo
 
 Your environment variables are all sensitive so be sure when you add a variable key value pair you check "sensitive" checkbox
 ```
-TF_VAR_openai_api_key = <your OpenAI API key>
+TF_VAR_raisim_api_key = <your RaiSim API key>
 TF_VAR_db_password = <insert database password>
 AWS_ACCESS_KEY_ID = <your aws id>
 AWS_SECRET_ACCESS_KEY = <your aws key>
@@ -217,28 +179,6 @@ ssm and aws_instance user_data have put a zipped up version of simtooreal on the
 cd /simtooreal
 ```
 
-Run these commands on the private instance to setup and seed the database with data to your liking
-```
-export PGPASSWORD=<insert database password>
-ansible-playbook -i hosts setup.yml
-ansible-playbook -i hosts insert_item.yml -e "item_name='action toy'"
-ansible-playbook -i hosts insert_item.yml -e "item_name='race car'"
-ansible-playbook -i hosts insert_item.yml -e "item_name='candy bar'"
-ansible-playbook -i hosts insert_item.yml -e "item_name='ice cream'"
-ansible-playbook -i hosts insert_item.yml -e "item_name='big thing'"
-ansible-playbook -i hosts insert_item.yml -e "item_name='small thing'"
-ansible-playbook -i hosts insert_item.yml -e "item_name='doll'"
-ansible-playbook -i hosts insert_item.yml -e "item_name='box'"
-ansible-playbook -i hosts insert_item.yml -e "item_name='envelope'"
-ansible-playbook -i hosts insert_robot.yml -e "robot_name='big robot'"
-ansible-playbook -i hosts insert_robot.yml -e "robot_name='little robot'"
-ansible-playbook -i hosts insert_robot.yml -e "robot_name='optimus'"
-ansible-playbook -i hosts item_picks.yml -e "item_name='candy bar'"
-ansible-playbook -i hosts robot_picks.yml -e "robot_name='walle'"
-```
-
-Press ctrl+D twice when you setup the database to get back to your machine
-
 ## Setup github secrets
 
 Start a new repo in github called simtooreal
@@ -267,7 +207,7 @@ I have my environment variables set in github workflow but you will need to put 
 
 When you are ready to zip up some of the scripts to put on the private instance run this command
 ```
-rm simtooreal.tar.gz && rsync -a *.sql simtooreal && rsync -a *.py simtooreal && rsync -a *.yml simtooreal && rsync -a *.txt simtooreal && rsync -a topics.csv simtooreal && rsync -a Dockerfile simtooreal && rsync -a clf.joblib simtooreal && rsync -a templates simtooreal && rsync -a *.json simtooreal && tar -zcvf simtooreal.tar.gz simtooreal && rm -rf simtooreal
+rm simtooreal.tar.gz && rsync -a *.py simtooreal && rsync -a *.yml simtooreal && rsync -a *.txt simtooreal && rsync -a Dockerfile simtooreal && tar -zcvf simtooreal.tar.gz simtooreal && rm -rf simtooreal
 ```
 This also updates the version of simtooreal found on the private instance after you destroy an instance and re-run the terraform apply in terraform cloud
 
@@ -287,16 +227,3 @@ git remote add origin https://github.com/<your github username>/simtooreal.git
 git branch -M main
 git push -u origin main
 ```
-
-## Automated training and pushing of pickle file to github and then to ECS happens on the private instance
-
-The data engine turns every day by training on the AWS private instance as long as your github credentials are setup
-Make sure to setup ssh keys in github and on the private instance in AWS using these instructions
-https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh
-Or use https
-After cloning the repo onto your private instance you can run the training automatically by starting a tmux session
-Then you can set environment variables and run the command to train your model and update your pickle file
-```
-export PGPASSWORD=<insert database password> && export POSTGRESQL_HOST=database.simtooreal.com && export POSTGRESQL_USER_NAME=postgres && export POSTGRESQL_PASSWORD=<insert database password>
-```
-It will repeate every 24 hours, automatically updating your models for inference, and pickle file history is kept in github

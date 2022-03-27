@@ -4,16 +4,6 @@ data "aws_route53_zone" "zone_simtooreal" {
   private_zone = false
 }
 
-# route53 record for database so that no long database endpoints need to be remembered
-resource "aws_route53_record" "record_database_simtooreal" {
-  name    = "database.simtooreal.com"
-  zone_id = data.aws_route53_zone.zone_simtooreal.id
-  type    = "CNAME"
-  ttl     = 30
-
-  records = [aws_rds_cluster.simtooreal.endpoint]
-}
-
 # route53 record for private EC2 instance so that no long ip addresses need to be remembered
 resource "aws_route53_record" "record_private_simtooreal" {
   name    = "private.simtooreal.com"
@@ -187,9 +177,7 @@ inline_policy {
         "ssm:GetParameters"
       ],
       "Resource": [
-        "arn:aws:ssm:${var.aws_region}:*:parameter/parameter/production/POSTGRESQL_HOST",
-        "arn:aws:ssm:${var.aws_region}:*:parameter/parameter/production/POSTGRESQL_PASSWORD",
-        "arn:aws:ssm:${var.aws_region}:*:parameter/parameter/production/OPENAI_API_KEY"
+        "arn:aws:ssm:${var.aws_region}:*:parameter/parameter/production/RAISIM_API_KEY"
       ]
     }
   ]
@@ -218,39 +206,6 @@ resource "aws_iam_role" "simtooreal_s3_read" {
 EOF
 }
 
-# ECS task role
-resource "aws_iam_role" "simtooreal_ecs" {
-  name = "simtooreal_ecs"
-
-  assume_role_policy = <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Action": "sts:AssumeRole",
-            "Principal": {
-               "Service": "ecs-tasks.amazonaws.com"
-            },
-            "Effect": "Allow",
-            "Sid": ""
-        }
-    ]
-}
-EOF
-}
-
-# ECS task execution role policy attachment
-resource "aws_iam_role_policy_attachment" "simtooreal_ecs_task_execution" {
-  role       = aws_iam_role.simtooreal_ecs_task_execution.name
-  policy_arn = aws_iam_policy.simtooreal_ecs_task_execution.arn
-}
-
-# ECS task  role policy attachment
-resource "aws_iam_role_policy_attachment" "simtooreal_ecs" {
-  role       = aws_iam_role.simtooreal_ecs.name
-  policy_arn = aws_iam_policy.simtooreal_ecs.arn
-}
-
 # role policy attachment for reading s3
 resource "aws_iam_role_policy_attachment" "simtooreal_s3_public_read" {
   role       = aws_iam_role.simtooreal_s3_read.name
@@ -261,32 +216,6 @@ resource "aws_iam_role_policy_attachment" "simtooreal_s3_public_read" {
 resource "aws_iam_role_policy_attachment" "simtooreal_s3_private_read" {
   role       = aws_iam_role.simtooreal_s3_read.name
   policy_arn = aws_iam_policy.simtooreal_s3_private_read.arn
-}
-
-# IAM policy for task execution
-resource "aws_iam_policy" "simtooreal_ecs_task_execution" {
-  name               = "simtooreal_ecs_task_execution"
-  description        = "Policy to allow ECS to execute tasks"
-
-  policy = <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ecr:GetAuthorizationToken",
-                "ecr:BatchCheckLayerAvailability",
-                "ecr:GetDownloadUrlForLayer",
-                "ecr:BatchGetImage",
-                "logs:CreateLogStream",
-                "logs:PutLogEvents"
-            ],
-            "Resource": "*"
-        }
-    ]
-}
-EOF
 }
 
 # IAM policy for reading s3 in simtooreal
@@ -309,9 +238,7 @@ resource "aws_iam_policy" "simtooreal_s3_public_read" {
             ],
             "Resource": [
                 "arn:aws:s3:::simtooreal-public/*",
-                "arn:aws:ssm:${var.aws_region}:*:parameter/parameter/production/AWS_ACCESS_KEY_ID",
-                "arn:aws:ssm:${var.aws_region}:*:parameter/parameter/production/AWS_SECRET_ACCESS_KEY",
-                "arn:aws:ssm:${var.aws_region}:*:parameter/parameter/production/OPENAI_API_KEY"
+                "arn:aws:ssm:${var.aws_region}:*:parameter/parameter/production/RAISIM_API_KEY"
             ]
         }
     ]
@@ -339,45 +266,8 @@ resource "aws_iam_policy" "simtooreal_s3_private_read" {
             ],
             "Resource": [
                 "arn:aws:s3:::simtooreal-private/*",
-                "arn:aws:ssm:${var.aws_region}:*:parameter/parameter/production/AWS_ACCESS_KEY_ID",
-                "arn:aws:ssm:${var.aws_region}:*:parameter/parameter/production/AWS_SECRET_ACCESS_KEY",
-                "arn:aws:ssm:${var.aws_region}:*:parameter/parameter/production/OPENAI_API_KEY"
+                "arn:aws:ssm:${var.aws_region}:*:parameter/parameter/production/RAISIM_API_KEY"
             ]
-        }
-    ]
-}
-EOF
-}
-
-# IAM policy for ECS
-resource "aws_iam_policy" "simtooreal_ecs" {
-  name               = "simtooreal_ecs"
-  description        = "Policy to allow ECS access"
-
-  policy = <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ec2:DescribeTags",
-                "ecs:CreateCluster",
-                "ecs:DeregisterContainerInstance",
-                "ecs:DiscoverPollEndpoint",
-                "ecs:Poll",
-                "ecs:RegisterContainerInstance",
-                "ecs:StartTelemetrySession",
-                "ecs:UpdateContainerInstancesState",
-                "ecs:Submit*",
-                "ecr:GetAuthorizationToken",
-                "ecr:BatchCheckLayerAvailability",
-                "ecr:GetDownloadUrlForLayer",
-                "ecr:BatchGetImage",
-                "logs:CreateLogStream",
-                "logs:PutLogEvents"
-            ],
-            "Resource": "*"
         }
     ]
 }
@@ -585,84 +475,6 @@ resource "aws_security_group" "simtooreal_rds" {
   }
 }
 
-# database cluster instances for simtooreal
-resource "aws_rds_cluster_instance" "simtooreal" {
-  # WARNING: Setting count to anything less than 2 reduces
-  # the reliability of your system, many times an instance
-  # failure has occured requiring a hot switch to a
-  # secondary instance, if there is nothing to switch to
-  # you may regret setting count to 1, consider reliability
-  # and weigh it against infrastructure cost
-  count                = 1
-  cluster_identifier   = aws_rds_cluster.simtooreal.id
-  instance_class       = "db.r4.large"
-  db_subnet_group_name = aws_db_subnet_group.simtooreal.name
-  engine               = "aurora-postgresql"
-  engine_version       = "12.4"
-}
-
-# database cluster for simtooreal
-resource "aws_rds_cluster" "simtooreal" {
-  cluster_identifier        = "simtooreal"
-  #availability_zones        = ["us-east-1a", "us-east-1b", "us-east-1c"]
-  database_name             = "simtooreal"
-  master_username           = "postgres"
-  master_password           = var.db_password
-  db_subnet_group_name      = aws_db_subnet_group.simtooreal.name
-  engine                    = "aurora-postgresql"
-  engine_version            = "12.4"
-  vpc_security_group_ids    = [aws_security_group.simtooreal_rds.id]
-  skip_final_snapshot       = "true"
-  final_snapshot_identifier = "foo"
-  storage_encrypted         = "true"
-  #snapshot_identifier      = "simtooreal"
-}
-
-### Elasticache
-
-# Security Group for resources that want to access redis
-resource "aws_security_group" "simtooreal_redis_access" {
-  vpc_id      = aws_vpc.simtooreal.id
-  name        = "simtooreal_redis_access"
-  description = "simtooreal redis access security group managed by Terraform"
-
-  ingress {
-    # TLS (change to whatever ports you need)
-    from_port = 6379
-    to_port   = 6379
-    protocol  = "tcp"
-
-    # Please restrict your ingress to only necessary IPs and ports.
-    # Opening to 0.0.0.0/0 can lead to security vulnerabilities.
-    cidr_blocks = [aws_vpc.simtooreal.cidr_block]
-  }
-}
-
-resource "aws_security_group" "simtooreal_redis" {
-  name        = "simtooreal_redis"
-  vpc_id      = aws_vpc.simtooreal.id
-  description = "simtooreal Redis Security Group managed by Terraform"
-
-  //allow traffic for TCP 6379
-  ingress {
-    from_port = 6379
-    to_port   = 6379
-    protocol  = "tcp"
-
-    # Please restrict your ingress to only necessary IPs and ports.
-    # Opening to 0.0.0.0/0 can lead to security vulnerabilities.
-    security_groups = aws_security_group.simtooreal_ecs.*.id
-  }
-
-  // outbound internet access
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
 # public security group for load balancers and bastions
 resource "aws_security_group" "simtooreal_public" {
   name        = "simtooreal_public"
@@ -676,7 +488,7 @@ resource "aws_security_group" "simtooreal_public" {
     protocol    = "tcp"
     from_port   = 22
     to_port     = 22
-    cidr_blocks = ["52.119.113.73/32"]
+    cidr_blocks = ["69.181.183.147/32"]
   }
 
   egress {
@@ -686,37 +498,6 @@ resource "aws_security_group" "simtooreal_public" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
-
-### Elasticache
-
-# # elasticache for simtooreal
-# resource "aws_elasticache_subnet_group" "simtooreal" {
-#   name       = "simtooreal"
-#   subnet_ids = aws_subnet.simtooreal_private.*.id
-# }
-
-# # elasticache cluster for simtooreal
-# resource "aws_elasticache_cluster" "simtooreal" {
-#   cluster_id           = "simtooreal"
-#   engine               = "redis"
-#   node_type            = "cache.m5.large"
-#   port                 = 6379
-#   num_cache_nodes      = 1
-#   security_group_ids   = [aws_security_group.simtooreal_redis.id]
-#   subnet_group_name    = aws_elasticache_subnet_group.simtooreal.name
-#   parameter_group_name = aws_elasticache_parameter_group.simtooreal.name
-# }
-
-# # elasticache parameter group for simtooreal
-# resource "aws_elasticache_parameter_group" "simtooreal" {
-#   name   = "redis-28-simtooreal"
-#   family = "redis6.x"
-
-#   parameter {
-#     name  = "timeout"
-#     value = "500"
-#   }
-# }
 
 ### AWS instances
 
@@ -774,46 +555,17 @@ resource "aws_instance" "simtooreal_private" {
   # to troubleshoot your user_data logon to the instance and run this
   #cat /var/log/cloud-init-output.log
 
+  root_block_device { 
+    volume_size = "50"
+    volume_type = "standard"
+  }
+
   # lifecycle {
   #   ignore_changes = [user_data]
   # }
 
   tags = {
     Name = "simtooreal_private"
-  }
-}
-
-### ECS
-
-# ECS service for the backend
-resource "aws_ecs_service" "simtooreal_backend" {
-  name            = "simtooreal_backend"
-  cluster         = aws_ecs_cluster.simtooreal.id
-  task_definition = aws_ecs_task_definition.simtooreal_backend.family
-  desired_count   = var.app_count
-  launch_type     = "FARGATE"
-  force_new_deployment = true
-
-  network_configuration {
-    security_groups = [aws_security_group.simtooreal_ecs.id]
-    subnets         = aws_subnet.simtooreal_private.*.id
-  }
-
-  load_balancer {
-    target_group_arn = aws_lb_target_group.simtooreal_backend.id
-    container_name   = "simtooreal-backend"
-    container_port   = "8080"
-  }
-
-  depends_on = [aws_lb_listener.simtooreal]
-
-  tags = {
-    Description = "simtooreal Elastic Container Service managed by Terraform"
-    Environment = "production"
-  }
-
-  lifecycle {
-    ignore_changes = [desired_count]
   }
 }
 
@@ -847,300 +599,6 @@ resource "aws_ecs_service" "simtooreal_backend" {
 #     ignore_changes = [desired_count]
 #   }
 # }
-
-### Autoscaling
-
-# autoscaling target for simtooreal
-resource "aws_appautoscaling_target" "simtooreal_backend" {
-  service_namespace  = "ecs"
-  resource_id        = "service/${aws_ecs_cluster.simtooreal.name}/${aws_ecs_service.simtooreal_backend.name}"
-  scalable_dimension = "ecs:service:DesiredCount"
-  max_capacity       = var.ecs_autoscale_max_instances
-  min_capacity       = 1
-}
-
-resource "aws_cloudwatch_metric_alarm" "simtooreal_backend_memory_utilization_high" {
-  alarm_name          = "simtooreal_backend_memory_utilization_high"
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  evaluation_periods  = "1"
-  metric_name         = "MemoryUtilization"
-  namespace           = "AWS/ECS"
-  period              = "60"
-  statistic           = "Average"
-  threshold           = 60
-
-  dimensions = {
-    ClusterName = aws_ecs_cluster.simtooreal.name
-    ServiceName = aws_ecs_service.simtooreal_backend.name
-  }
-
-  alarm_actions = [aws_appautoscaling_policy.simtooreal_backend_memory_utilization_high.arn]
-}
-
-# memory metric alarm
-resource "aws_cloudwatch_metric_alarm" "simtooreal_backend_memory_utilization_low" {
-  alarm_name          = "simtooreal_backend_memory_utilization_high"
-  comparison_operator = "LessThanThreshold"
-  evaluation_periods  = "1"
-  metric_name         = "MemoryUtilization"
-  namespace           = "AWS/ECS"
-  period              = "60"
-  statistic           = "Average"
-  threshold           = 30
-
-  dimensions = {
-    ClusterName = aws_ecs_cluster.simtooreal.name
-    ServiceName = aws_ecs_service.simtooreal_backend.name
-  }
-
-  alarm_actions = [aws_appautoscaling_policy.simtooreal_backend_memory_utilization_low.arn]
-}
-
-# memory metric alarm
-resource "aws_appautoscaling_policy" "simtooreal_backend_memory_utilization_high" {
-  name               = "simtooreal_backend_memory_utilization_high"
-  service_namespace  = aws_appautoscaling_target.simtooreal_backend.service_namespace
-  resource_id        = aws_appautoscaling_target.simtooreal_backend.resource_id
-  scalable_dimension = aws_appautoscaling_target.simtooreal_backend.scalable_dimension
-
-  step_scaling_policy_configuration {
-    adjustment_type         = "ChangeInCapacity"
-    cooldown                = 60
-    metric_aggregation_type = "Average"
-
-    step_adjustment {
-      metric_interval_lower_bound = 0
-      scaling_adjustment          = 1
-    }
-  }
-}
-
-# memory metric alarm policy
-resource "aws_appautoscaling_policy" "simtooreal_backend_memory_utilization_low" {
-  name               = "simtooreal_backend_memory_utilization_low"
-  service_namespace  = aws_appautoscaling_target.simtooreal_backend.service_namespace
-  resource_id        = aws_appautoscaling_target.simtooreal_backend.resource_id
-  scalable_dimension = aws_appautoscaling_target.simtooreal_backend.scalable_dimension
-
-  step_scaling_policy_configuration {
-    adjustment_type         = "ChangeInCapacity"
-    cooldown                = 300
-    metric_aggregation_type = "Average"
-
-    step_adjustment {
-      metric_interval_upper_bound = 0
-      scaling_adjustment          = -1
-    }
-  }
-}
-
-# backend task definition
-resource "aws_ecs_task_definition" "simtooreal_backend" {
-  depends_on = [
-    aws_lb.simtooreal,
-    #aws_elasticache_cluster.simtooreal,
-    aws_rds_cluster.simtooreal,
-  ]
-  family                   = "simtooreal"
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  cpu                      = 1024
-  memory                   = 4096
-  execution_role_arn       = aws_iam_role.simtooreal_ecs_task_execution.arn
-
-  container_definitions = jsonencode([
-    {
-      name      = "simtooreal-backend"
-      image     = "danriti/nginx-gunicorn-flask"
-      cpu       = 256
-      memory    = 512
-      essential = true
-      portMappings = [
-        {
-          containerPort = 8080
-          hostPort      = 8080
-        }
-      ],
-      "mountPoints": [],
-      "logConfiguration": {
-          "logDriver": "awslogs",
-          "options": {
-              "awslogs-group": "/ecs/simtooreal",
-              "awslogs-region": "us-east-1",
-              "awslogs-stream-prefix": "simtooreal-backend"
-          }
-      },
-      "volumesFrom": [],
-      "environment": []
-    }
-  ])
-}
-
-# cloudwatch log group
-resource "aws_cloudwatch_log_group" "simtooreal" {
-  name              = "/ecs/simtooreal"
-  retention_in_days = 30
-
-  tags = {
-    Environment = "production"
-    Application = "simtooreal"
-  }
-}
-
-# This needs to be integrated completely into our container_definitions of our aws_ecs_task_definition
-resource "aws_cloudwatch_log_stream" "simtooreal" {
-  name           = "simtooreal"
-  log_group_name = aws_cloudwatch_log_group.simtooreal.name
-}
-
-# ECS cluster for simtooreal
-resource "aws_ecs_cluster" "simtooreal" {
-  name = "simtooreal"
-
-  setting {
-    name  = "containerInsights"
-    value = "enabled"
-  }
-}
-
-# Traffic to the ECS Cluster should only come from the ALB, DB, or elasticache
-resource "aws_security_group" "simtooreal_ecs" {
-  name        = "simtooreal_ecs"
-  description = "simtooreal Elastic Container Service (ECS) security group managed by Terraform"
-  vpc_id      = aws_vpc.simtooreal.id
-
-  ingress {
-    protocol  = "tcp"
-    from_port = "80"
-    to_port   = "80"
-
-    # Please restrict your ingress to only necessary IPs and ports.
-    # Opening to 0.0.0.0/0 can lead to security vulnerabilities.
-    security_groups = [aws_security_group.simtooreal_lb.id]
-  }
-
-  ingress {
-    protocol  = "tcp"
-    from_port = 8080
-    to_port   = 8080
-
-    # Please restrict your ingress to only necessary IPs and ports.
-    # Opening to 0.0.0.0/0 can lead to security vulnerabilities.
-    security_groups = [aws_security_group.simtooreal_lb.id]
-  }
-
-  egress {
-    protocol        = "tcp"
-    from_port       = "5432"
-    to_port         = "5432"
-    security_groups = [aws_security_group.simtooreal_db_access.id]
-  }
-
-  egress {
-    protocol        = "tcp"
-    from_port       = "6379"
-    to_port         = "6379"
-    security_groups = [aws_security_group.simtooreal_redis_access.id]
-  }
-
-  ingress {
-    protocol  = "tcp"
-    from_port = 22
-    to_port   = 22
-
-    # Please restrict your ingress to only necessary IPs and ports.
-    # Opening to 0.0.0.0/0 can lead to security vulnerabilities.
-    cidr_blocks = [aws_vpc.simtooreal.cidr_block]
-  }
-
-  egress {
-    protocol    = "-1"
-    from_port   = 0
-    to_port     = 0
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-### ALB
-
-# load balancer for simtooreal
-resource "aws_lb" "simtooreal" {
-  name            = "simtooreal"
-  subnets         = aws_subnet.simtooreal_public.*.id
-  security_groups = [aws_security_group.simtooreal_lb.id]
-  idle_timeout    = 1800
-
-  tags = {
-    Description = "simtooreal Application Load Balancer managed by Terraform"
-    Environment = "production"
-  }
-}
-
-# target group for simtooreal backend
-resource "aws_lb_target_group" "simtooreal_backend" {
-  name        = "simtooreal-backend"
-  port        = 8080
-  protocol    = "HTTP"
-  vpc_id      = aws_vpc.simtooreal.id
-  target_type = "ip"
-  slow_start  = 60
-
-  health_check {
-    interval = 60
-    timeout  = 10
-    path     = "/"
-    matcher  = "200"
-  }
-
-  tags = {
-    Description = "simtooreal Application Load Balancer target group managed by Terraform"
-    Environment = "production"
-  }
-}
-
-# security group for simtooreal load balancer
-resource "aws_security_group" "simtooreal_lb" {
-  name        = "simtooreal_lb"
-  description = "simtooreal load balancer security group managed by Terraform"
-  vpc_id      = aws_vpc.simtooreal.id
-
-  ingress {
-    protocol  = "tcp"
-    from_port = 443
-    to_port   = 443
-
-    # Please restrict your ingress to only necessary IPs and ports.
-    # Opening to 0.0.0.0/0 can lead to security vulnerabilities.
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    protocol  = "tcp"
-    from_port = 80
-    to_port   = 80
-
-    # Please restrict your ingress to only necessary IPs and ports.
-    # Opening to 0.0.0.0/0 can lead to security vulnerabilities.
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    protocol  = "tcp"
-    from_port = 8080
-    to_port   = 8080
-
-    # Please restrict your ingress to only necessary IPs and ports.
-    # Opening to 0.0.0.0/0 can lead to security vulnerabilities.
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
 
 # Redirect all traffic from the ALB to the target group
 resource "aws_lb_listener" "simtooreal" {
@@ -1219,37 +677,9 @@ resource "aws_s3_bucket_object" "simtooreal_private" {
 
 ### Systems Manager
 
-# ssm parameter group for database password
-resource "aws_ssm_parameter" "db_password" {
-  name        = "/parameter/production/POSTGRESQL_PASSWORD"
-  description = "The database password"
-  type        = "SecureString"
-  value       = var.db_password
-  overwrite   = "true"
-
-  tags = {
-    Name        = "simtooreal"
-    environment = "production"
-  }
-}
-
-# ssm parameter group for database endpoint
-resource "aws_ssm_parameter" "db_endpoint" {
-  name        = "/parameter/production/POSTGRESQL_HOST"
-  description = "The database endpoint"
-  type        = "SecureString"
-  value       = aws_rds_cluster.simtooreal.endpoint
-  overwrite   = "true"
-
-  tags = {
-    Name        = "simtooreal"
-    environment = "production"
-  }
-}
-
 # ssm parameter group for database endpoint
 resource "aws_ssm_parameter" "openai_api_key" {
-  name        = "/parameter/production/OPENAI_API_KEY"
+  name        = "/parameter/production/RAISIM_API_KEY"
   description = "Your OpenAI API Key"
   type        = "SecureString"
   value       = var.openai_api_key

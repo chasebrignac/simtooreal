@@ -459,7 +459,7 @@ resource "aws_instance" "simtooreal_public" {
 # reaching RDS is done through this instance
 resource "aws_instance" "simtooreal_private" {
   ami           = "ami-0fa37863afb290840"
-  instance_type = "t2.nano"
+  instance_type = "g5.xlarge"
   subnet_id     = aws_subnet.simtooreal_private[0].id
 
   vpc_security_group_ids      = [aws_security_group.simtooreal_private.id]

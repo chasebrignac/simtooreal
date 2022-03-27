@@ -24,32 +24,6 @@ resource "aws_route53_record" "record_public_simtooreal" {
   records = [aws_instance.simtooreal_public.public_ip]
 }
 
-# route53 record for short url
-resource "aws_route53_record" "short_simtooreal" {
-  name    = "simtooreal.com"
-  zone_id = data.aws_route53_zone.zone_simtooreal.id
-  type    = "A"
-
-  alias {
-    name                   = aws_lb.simtooreal.dns_name
-    zone_id                = aws_lb.simtooreal.zone_id
-    evaluate_target_health = true
-  }
-}
-
-# route53 record for full url
-resource "aws_route53_record" "simtooreal" {
-  name    = "www.simtooreal.com"
-  zone_id = data.aws_route53_zone.zone_simtooreal.id
-  type    = "A"
-
-  alias {
-    name                   = aws_lb.simtooreal.dns_name
-    zone_id                = aws_lb.simtooreal.zone_id
-    evaluate_target_health = true
-  }
-}
-
 # simtooreal certificate managed by Terraform
 resource "aws_acm_certificate" "simtooreal" {
   domain_name       = "*.simtooreal.com"
@@ -64,12 +38,6 @@ resource "aws_acm_certificate" "simtooreal" {
   lifecycle {
     create_before_destroy = true
   }
-}
-
-# the listener needs a cert as well
-resource "aws_lb_listener_certificate" "simtooreal" {
-  listener_arn    = aws_lb_listener.simtooreal.arn
-  certificate_arn = aws_acm_certificate.simtooreal.arn
 }
 
 # validation record for simtooreal cert
@@ -136,74 +104,6 @@ resource "aws_iam_instance_profile" "simtooreal_s3_public_read" {
 
 resource "aws_iam_instance_profile" "simtooreal_s3_private_read" {
   name     = "simtooreal_s3_private_read"
-}
-
-# instance profile for ecs
-resource "aws_iam_instance_profile" "simtooreal_ecs" {
-  name     = "simtooreal_ecs"
-}
-
-# task execution ecs role for simtooreal
-resource "aws_iam_role" "simtooreal_ecs_task_execution" {
-  name = "simtooreal_ecs_task_execution"
-
-  assume_role_policy = <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Action": "sts:AssumeRole",
-            "Principal": {
-               "Service": "ecs-tasks.amazonaws.com"
-            },
-            "Effect": "Allow",
-            "Sid": ""
-        }
-    ]
-}
-EOF
-
-# this is necessary for hosting database passwords and hosts in AWS Systems Manager
-# for convenience and so passwords are less likely to be stored on local machines
-inline_policy {
-  name = "my_inline_policy"
-
-  policy = jsonencode({
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "ssm:GetParameters"
-      ],
-      "Resource": [
-        "arn:aws:ssm:${var.aws_region}:*:parameter/parameter/production/RAISIM_API_KEY"
-      ]
-    }
-  ]
-})
-}
-}
-
-# s3 reading role for ECS tasks
-resource "aws_iam_role" "simtooreal_s3_read" {
-  name = "simtooreal_s3_read"
-
-  assume_role_policy = <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Action": "sts:AssumeRole",
-            "Principal": {
-               "Service": "ecs-tasks.amazonaws.com"
-            },
-            "Effect": "Allow",
-            "Sid": ""
-        }
-    ]
-}
-EOF
 }
 
 # role policy attachment for reading s3
@@ -463,7 +363,7 @@ resource "aws_security_group" "simtooreal_rds" {
 
     # Please restrict your ingress to only necessary IPs and ports.
     # Opening to 0.0.0.0/0 can lead to security vulnerabilities.
-    security_groups = aws_security_group.simtooreal_ecs.*.id
+    security_groups = aws_security_group.simtooreal_private.*.id
   }
 
   // outbound internet access
@@ -538,20 +438,15 @@ resource "aws_instance" "simtooreal_public" {
 # private instance inside the private subnet
 # reaching RDS is done through this instance
 resource "aws_instance" "simtooreal_private" {
-  # These can be ecs optimized AMI if Amazon Linux OS is your thing
-  # or you can even add an ECS compatible AMI, update instance type to t2.2xlarge
-  # add to the user_data "ECS_CLUSTER= simtooreal >> /etc/ecs/ecs.config"
-  # and add the iam_instance_profile of aws_iam_instance_profile.simtooreal_ecs.name
-  # and you would then be able to use this instance in ECS
   ami           = "ami-0fa37863afb290840"
   instance_type = "t2.nano"
   subnet_id     = aws_subnet.simtooreal_private[0].id
 
-  vpc_security_group_ids      = [aws_security_group.simtooreal_ecs.id]
+  vpc_security_group_ids      = [aws_security_group.simtooreal_private.id]
   key_name                    = aws_key_pair.simtooreal.key_name
   iam_instance_profile        = aws_iam_instance_profile.simtooreal_s3_private_read.name
   depends_on                  = [aws_s3_bucket_object.simtooreal_private]
-  user_data                   = "#!/bin/bash\necho $USER\ncd /home/ubuntu\npwd\necho beginscript\nsudo apt-get update -y\nsudo apt-get install awscli -y\necho $USER\necho ECS_CLUSTER=simtooreal > /etc/ecs/ecs.config\napt-add-repository --yes --update ppa:ansible/ansible\napt -y install ansible\napt install postgresql-client-common\napt-get -y install postgresql\napt-get remove docker docker-engine docker-ce docker.io\napt-get install -y apt-transport-https ca-certificates curl software-properties-common\nexport AWS_ACCESS_KEY_ID=${aws_ssm_parameter.simtooreal_aws_access_key_id.value}\nexport AWS_SECRET_ACCESS_KEY=${aws_ssm_parameter.simtooreal_secret_access_key.value}\nexport AWS_DEFAULT_REGION=us-east-1\naws s3 cp s3://simtooreal-private/simtooreal.tar.gz ./\ntar -zxvf simtooreal.tar.gz\nmv simtooreal data\napt install python3-pip -y\napt-get install tmux"
+  user_data                   = "#!/bin/bash\necho $USER\ncd /home/ubuntu\npwd\necho beginscript\nsudo apt-get update -y\nsudo apt-get install awscli -y\necho $USER\napt-add-repository --yes --update ppa:ansible/ansible\napt -y install ansible\napt install postgresql-client-common\napt-get -y install postgresql\napt-get remove docker docker-engine docker-ce docker.io\napt-get install -y apt-transport-https ca-certificates curl software-properties-common\nexport AWS_ACCESS_KEY_ID=${aws_ssm_parameter.simtooreal_aws_access_key_id.value}\nexport AWS_SECRET_ACCESS_KEY=${aws_ssm_parameter.simtooreal_secret_access_key.value}\nexport AWS_DEFAULT_REGION=us-east-1\naws s3 cp s3://simtooreal-private/simtooreal.tar.gz ./\ntar -zxvf simtooreal.tar.gz\nmv simtooreal data\napt install python3-pip -y\napt-get install tmux"
   # to troubleshoot your user_data logon to the instance and run this
   #cat /var/log/cloud-init-output.log
 
@@ -569,65 +464,34 @@ resource "aws_instance" "simtooreal_private" {
   }
 }
 
-# in case we ever want to start using reserved instances to try and save money
-# resource "aws_ecs_service" "simtooreal_backend_reserved" {
-#   name            = "simtooreal_backend_reserved"
-#   cluster         = aws_ecs_cluster.simtooreal.id
-#   task_definition = aws_ecs_task_definition.simtooreal_backend.arn
-#   desired_count   = var.app_count
-#   launch_type     = "EC2"
-#
-#   network_configuration {
-#     security_groups = [aws_security_group.simtooreal_ecs.id]
-#     subnets         = aws_subnet.simtooreal_private.*.id
-#   }
-#
-#   load_balancer {
-#     target_group_arn = aws_lb_target_group.simtooreal_backend.id
-#     container_name   = "simtooreal_backend"
-#     container_port   = "8080"
-#   }
-#
-#   depends_on = [aws_lb_listener.simtooreal]
-#
-#   tags = {
-#     Description = "simtooreal reserved Elastic Container Service managed by Terraform"
-#     Environment = "production"
-#   }
-#
-#   lifecycle {
-#     ignore_changes = [desired_count]
-#   }
-# }
+# Traffic to the private security group should only come from AWS services such as the ALB, DB, or elasticache
+resource "aws_security_group" "simtooreal_private" {
+  name        = "simtooreal_private"
+  description = "Private security group managed by Terraform"
+  vpc_id      = aws_vpc.simtooreal.id
 
-# Redirect all traffic from the ALB to the target group
-resource "aws_lb_listener" "simtooreal" {
-  load_balancer_arn = aws_lb.simtooreal.id
-  port              = "443"
-  protocol          = "HTTPS"
-  ssl_policy        = "ELBSecurityPolicy-TLS-1-2-2017-01"
-  certificate_arn   = aws_acm_certificate.simtooreal.arn
-
-  default_action {
-    target_group_arn = aws_lb_target_group.simtooreal_backend.id
-    type             = "forward"
+  egress {
+    protocol        = "tcp"
+    from_port       = "5432"
+    to_port         = "5432"
+    security_groups = [aws_security_group.simtooreal_db_access.id]
   }
-}
 
-# listener for http to be redirected to https
-resource "aws_lb_listener" "simtooreal_http" {
-  load_balancer_arn = aws_lb.simtooreal.id
-  port              = "80"
-  protocol          = "HTTP"
+  ingress {
+    protocol  = "tcp"
+    from_port = 22
+    to_port   = 22
 
-  default_action {
-    type = "redirect"
+    # Please restrict your ingress to only necessary IPs and ports.
+    # Opening to 0.0.0.0/0 can lead to security vulnerabilities.
+    cidr_blocks = [aws_vpc.simtooreal.cidr_block]
+  }
 
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
-    }
+  egress {
+    protocol    = "-1"
+    from_port   = 0
+    to_port     = 0
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 

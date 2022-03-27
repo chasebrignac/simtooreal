@@ -137,7 +137,11 @@ Wait for terraform apply to finish and you should have a green output in your ru
 
 ## Enable ssh key agent forwarding and login to the bastion and the private instance to setup the database
 
-Open up your ssh config and edit it making sure to use the IP addresses you just found for your instances
+Open up your ssh config and edit it making sure to use the IP addresses you find for your private and public EC2 instances here https://us-east-1.console.aws.amazon.com/ec2/v2/home?region=us-east-1#Instances:
+
+Replace the 172.17.0.41 IP address with your "Private IPv4 addresses" for simtooreal_private
+
+Replace the three 3.237.80.32 IP addresses with your "Public IPv4 address" for simtooreal_public
 ```
 nano ~/.ssh/config
 ```
@@ -171,6 +175,8 @@ If you get the error Host key verification failed. you need to open your ~/.ssh/
 This error means that someone may have replaced the public instance with another one and is trying to trick you
 Usually the simpler explanation is that you yourself or the local infrastructure admin have replaced the bastion
 But be security minded and be careful
+
+Run this next command inside the public instance once logged in
 ```
 ssh -o StrictHostKeyChecking=no -i "~/.ssh/id_rsa" ubuntu@private.simtooreal.com
 ```

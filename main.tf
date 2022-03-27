@@ -158,7 +158,7 @@ resource "aws_iam_policy" "simtooreal_s3_public_read" {
             ],
             "Resource": [
                 "arn:aws:s3:::simtooreal-public/*",
-                "arn:aws:ssm:${var.aws_region}:*:parameter/parameter/production/RAISIM_API_KEY"
+                "arn:aws:ssm:${var.aws_region}:*:parameter/parameter/production/AWS_ACCESS_KEY_ID"
             ]
         }
     ]
@@ -186,7 +186,7 @@ resource "aws_iam_policy" "simtooreal_s3_private_read" {
             ],
             "Resource": [
                 "arn:aws:s3:::simtooreal-private/*",
-                "arn:aws:ssm:${var.aws_region}:*:parameter/parameter/production/RAISIM_API_KEY"
+                "arn:aws:ssm:${var.aws_region}:*:parameter/parameter/production/AWS_ACCESS_KEY_ID"
             ]
         }
     ]
@@ -560,20 +560,6 @@ resource "aws_s3_bucket_object" "simtooreal_private" {
 }
 
 ### Systems Manager
-
-# ssm parameter group for database endpoint
-resource "aws_ssm_parameter" "openai_api_key" {
-  name        = "/parameter/production/RAISIM_API_KEY"
-  description = "Your OpenAI API Key"
-  type        = "SecureString"
-  value       = var.openai_api_key
-  overwrite   = "true"
-
-  tags = {
-    Name        = "simtooreal"
-    environment = "production"
-  }
-}
 
 # ssm parameter group for user id password
 resource "aws_ssm_parameter" "simtooreal_aws_access_key_id" {

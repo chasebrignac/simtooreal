@@ -106,6 +106,26 @@ resource "aws_iam_instance_profile" "simtooreal_s3_private_read" {
   name     = "simtooreal_s3_private_read"
 }
 
+resource "aws_iam_role" "simtooreal_s3_read" {
+  name = "simtooreal_s3_read"
+
+  assume_role_policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": "sts:AssumeRole",
+            "Principal": {
+               "Service": "ec2.amazonaws.com"
+            },
+            "Effect": "Allow",
+            "Sid": ""
+        }
+    ]
+}
+EOF
+}
+
 # role policy attachment for reading s3
 resource "aws_iam_role_policy_attachment" "simtooreal_s3_public_read" {
   role       = aws_iam_role.simtooreal_s3_read.name

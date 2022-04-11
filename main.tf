@@ -676,7 +676,7 @@ resource "aws_security_group" "simtooreal_public" {
     protocol    = "tcp"
     from_port   = 22
     to_port     = 22
-    cidr_blocks = ["52.119.113.73/32"]
+    cidr_blocks = ["72.207.251.201/32"]
   }
 
   egress {

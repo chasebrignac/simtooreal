@@ -598,7 +598,7 @@ resource "aws_rds_cluster_instance" "simtooreal" {
   instance_class       = "db.r4.large"
   db_subnet_group_name = aws_db_subnet_group.simtooreal.name
   engine               = "aurora-postgresql"
-  engine_version       = "12.4"
+  engine_version       = "12.8"
 }
 
 # database cluster for simtooreal
@@ -610,7 +610,7 @@ resource "aws_rds_cluster" "simtooreal" {
   master_password           = var.db_password
   db_subnet_group_name      = aws_db_subnet_group.simtooreal.name
   engine                    = "aurora-postgresql"
-  engine_version            = "12.4"
+  engine_version            = "12.8"
   vpc_security_group_ids    = [aws_security_group.simtooreal_rds.id]
   skip_final_snapshot       = "true"
   final_snapshot_identifier = "foo"

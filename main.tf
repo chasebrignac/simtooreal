@@ -777,6 +777,11 @@ resource "aws_instance" "simtooreal_private" {
   # lifecycle {
   #   ignore_changes = [user_data]
   # }
+  
+  root_block_device {
+    volume_size = "100"
+    volume_type = "standard"
+  }
 
   tags = {
     Name = "simtooreal_private"

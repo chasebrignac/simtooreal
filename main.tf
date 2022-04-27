@@ -593,7 +593,7 @@ resource "aws_rds_cluster_instance" "simtooreal" {
   # secondary instance, if there is nothing to switch to
   # you may regret setting count to 1, consider reliability
   # and weigh it against infrastructure cost
-  count                = 1
+  count                = 2
   cluster_identifier   = aws_rds_cluster.simtooreal.id
   instance_class       = "db.r4.large"
   db_subnet_group_name = aws_db_subnet_group.simtooreal.name

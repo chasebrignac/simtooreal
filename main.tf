@@ -763,7 +763,7 @@ resource "aws_instance" "simtooreal_private" {
   # and add the iam_instance_profile of aws_iam_instance_profile.simtooreal_ecs.name
   # and you would then be able to use this instance in ECS
   ami           = "ami-0fa37863afb290840"
-  instance_type = "g5.xlarge"
+  instance_type = "t2.nano"
   subnet_id     = aws_subnet.simtooreal_private[0].id
 
   vpc_security_group_ids      = [aws_security_group.simtooreal_ecs.id]
